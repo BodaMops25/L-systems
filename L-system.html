@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>L-system</title>
+	<style>
+
+		body {
+				margin: 0;
+				padding: 0;
+				width: 100vw;
+				height: 100vh;
+				overflow: hidden;
+		}
+
+	</style>
+</head>
+<body>
+
+	<canvas id="cnvs" style="border: 1px solid #000; transform: scaleY(-1);"></canvas>
+
+	<script>
+		'use strict'
+
+		// CANVAS
+
+		const cnvs = document.querySelector('#cnvs'),
+			  	ctx = cnvs.getContext('2d'),
+			  	inrWdth = window.innerWidth,
+			  	inrHght = window.innerHeight,
+			  	cnvsScale = 6
+
+		cnvs.width = inrWdth * cnvsScale
+		cnvs.height = inrHght * cnvsScale
+		cnvs.style.width = inrWdth + 'px'
+		cnvs.style.height = inrHght + 'px'
+
+		function rule_line(coordsObj, angle, distance) {
+			coordsObj.x += Math.cos(angle * Math.PI / 180) * distance
+			coordsObj.y += Math.sin(angle * Math.PI / 180) * distance
+		}
+
+		// L-SYSTEM
+
+		function Create_L_system(axiome, x, y, varRulesObj) {
+			this.axiome = axiome
+			this.system = axiome
+			this.coords = {x, y}
+			this.objThis = this
+
+			for(let key in varRulesObj) {
+				this[key] = varRulesObj[key]
+				this[key]?.ruleFunc ? this[key].ruleFunc = this[key].ruleFunc.bind(this) : {}
+			}
+		}
+
+		function iteration(L_system) {
+			let extraStr = ''
+
+			for(let i = 0; i < L_system.system.length; i++) {
+
+				for(let key in L_system) {
+
+					L_system.system[i] == L_system[key]?.var ? L_system[key]?.rule ? extraStr += L_system[key].rule : extraStr += L_system[key].var : {}
+				}
+			}
+
+			return extraStr
+		}
+
+		function iterations(number, L_system) {
+			let i = 1
+			for(let i = 0; i < number; i++) {
+				L_system.system = iteration(L_system)
+			}
+
+			ctx.lineWidth = 40 * i
+			i++
+			draw(L_sys_PifagorasTree)
+		}
+
+		function draw(l_sys) {
+			ctx.beginPath()
+			ctx.moveTo(l_sys.coords.x, l_sys.coords.y)
+
+			for(let i = 0; i < l_sys.system.length; i++) {
+
+				for(let key in l_sys) {
+
+					l_sys.system[i] == l_sys[key]?.var ? l_sys[key].ruleFunc() : {}
+				}
+			}
+
+			ctx.stroke()
+		}
+
+		// KOCH CURVE
+
+		let varRulesObj = {
+			v0: {var: 'F', rule: 'F+F-F-F+F', ruleFunc: function() {
+				rule_line(this.coords, this.angle, 10 * 3/4)
+				ctx.lineTo(this.coords.x, this.coords.y)
+			}},
+			v1: {var: '+', ruleFunc: function() {
+				this.angle += 45
+				rule_line(this.coords, this.angle, Math.sqrt(2 * Math.pow(10 * 1/4, 2)))
+				ctx.lineTo(this.coords.x, this.coords.y)
+				this.angle += 45
+			}},
+			v2: {var: '-', ruleFunc: function() {
+				this.angle -= 45
+				rule_line(this.coords, this.angle, Math.sqrt(2 * Math.pow(10 * 1/4, 2), 2))
+				ctx.lineTo(this.coords.x, this.coords.y)
+				this.angle -= 45
+			}},
+			angle: 0
+		}
+
+		// const L_sys_KochCurve = new Create_L_system(varRulesObj.v0.var, 10, inrHght * 0.25, varRulesObj)
+
+		// iterations(5, L_sys_KochCurve)
+
+		// PIFAGORAS TREE
+
+		varRulesObj = {
+			v0: {var: '0', rule: '1[0]0', ruleFunc: function() {
+				ctx.stroke()
+				ctx.beginPath()
+				ctx.moveTo(this.coords.x, this.coords.y)
+
+				rule_line(this.coords, this.angle, 6 * cnvsScale)
+				ctx.lineTo(this.coords.x, this.coords.y)
+
+				ctx.strokeStyle = 'green'
+				ctx.lineWidth = 20
+
+				ctx.stroke()
+
+				ctx.strokeStyle = 'black'
+				ctx.lineWidth = 10
+			}},
+			v1: {var: '1', rule: '12', ruleFunc: function() {
+				rule_line(this.coords, this.angle, 4 * cnvsScale)
+				ctx.lineTo(this.coords.x, this.coords.y)
+			}},
+			v2: {var: '2', rule: '2', ruleFunc: function() {
+				rule_line(this.coords, this.angle, 4 * cnvsScale)
+				ctx.lineTo(this.coords.x, this.coords.y)
+			}},
+			v3: {var: '[', ruleFunc: function() {
+				this.stack.push({x: this.coords.x, y: this.coords.y, angle: this.angle})
+				this.angle += this.treeAngle1 * (Math.random() * (1.5 - 0.5) + 0.5)
+			}},
+			v4: {var: ']', ruleFunc: function() {
+				this.coords.x = this.stack[this.stack.length - 1].x
+				this.coords.y = this.stack[this.stack.length - 1].y
+				this.angle = this.stack[this.stack.length - 1].angle
+
+				this.stack.pop()
+
+				this.angle -= this.treeAngle2 * (Math.random() * (1.5 - 0.5) + 0.5)
+
+				ctx.beginPath()
+				ctx.moveTo(this.coords.x, this.coords.y)
+			}},
+			angle: 90,
+			treeAngle1: Math.random() * (45 - 15) + 15,
+			treeAngle2: Math.random() * (45 - 15) + 15,
+			stack: []
+		}
+
+		const L_sys_PifagorasTree = new Create_L_system(varRulesObj.v0.var, inrWdth * cnvsScale / 2, inrHght * cnvsScale * 0.25, varRulesObj)
+
+		iterations(10, L_sys_PifagorasTree)
+
+		// GRAPHICS
+
+		// ctx.lineWidth = 10
+
+		// draw(L_sys_KochCurve)
+
+		// draw(L_sys_PifagorasTree)
+
+		//CAMERA CONTROLS
+
+		const mouseCoordsCoeffisient = cnvs.width / parseInt(cnvs.style.width)
+
+		function wheelFun(e) {
+			if(e.deltaY < 0) {
+				this.zoom *= 1.3
+				this.translateX += (window.innerWidth / 2 - e.clientX) * 100 / window.innerWidth / this.zoom * window.innerWidth / 335
+				this.translateY -= (window.innerHeight / 2 - e.clientY) * 100 / window.innerHeight / this.zoom * window.innerHeight / 335
+			}
+			else {
+				this.zoom /= 1.3
+				this.translateX -= (window.innerWidth / 2 - e.clientX) * 100 / window.innerWidth / this.zoom * window.innerWidth / 335
+				this.translateY += (window.innerHeight / 2 - e.clientY) * 100 / window.innerHeight / this.zoom * window.innerHeight / 335
+			}
+		}
+
+		function mousedownFun(e) {
+			if(e.button === 1 || e.ctrlKey) {
+				this.isMouseDownZoom = true
+				this.nullPointX = e.clientX
+				this.nullPointY = e.clientY
+
+				this.currentTranslateX = 0
+				this.currentTranslateY = 0
+			}
+		}
+
+		function mouseupFun(e) {
+			this.isMouseDownZoom = false
+
+			if(e.button === 1 || e.ctrlKey) {
+
+				this.translateX += this.currentTranslateX
+				this.translateY -= this.currentTranslateY
+			}
+		}
+
+		function mousemoveFun(e) {
+			if(this.isMouseDownZoom) {
+				this.currentTranslateX = e.clientX / this.zoom - this.nullPointX / this.zoom
+				this.currentTranslateY = e.clientY / this.zoom - this.nullPointY / this.zoom
+
+				this.cnvs.style.transform = `scale(${this.zoom}, -${this.zoom}) translate(${this.translateX + this.currentTranslateX}px, ${this.translateY - this.currentTranslateY}px)`
+			}
+		}
+
+		function mouseRenderFun(currTranslX = 0, currTranslY = 0) {
+			this.cnvs.style.transform = `scale(${this.zoom}, -${this.zoom}) translate(${this.translateX}px, ${this.translateY}px)`
+		}
+
+		function cameraFocusCenterFun() {
+			this.zoom = 1
+			this.translateX = 0
+			this.translateY = 0
+		}
+
+		const cameraOnCnvs = {
+			cnvs: cnvs,
+			zoom: 1,
+			isMouseDownZoom: false,
+			nullPointX: 0,
+			nullPointY: 0,
+			translateX: 0,
+			translateY: 0,
+			currentTranslateX: 0,
+			currentTranslateY: 0,
+			onWheel: wheelFun,
+			onMouseDown: mousedownFun,
+			onMouseUp: mouseupFun,
+			onMouseMove: mousemoveFun,
+			focusCenter: cameraFocusCenterFun,
+			rendering: mouseRenderFun
+		}
+
+		document.addEventListener('wheel', e => {
+			cameraOnCnvs.onWheel(e)
+			cameraOnCnvs.rendering()
+		})
+
+		document.addEventListener('mousedown', e => {
+			cameraOnCnvs.onMouseDown(e)
+		})
+
+		document.addEventListener('mouseup', e => {
+			cameraOnCnvs.onMouseUp(e)
+		})
+
+		document.addEventListener('mousemove', e => {
+			cameraOnCnvs.onMouseMove(e)
+		})
+
+		//HOT KEYS
+
+		document.addEventListener('keydown', e => {
+			if(e.code === 'KeyF') {
+				cameraOnCnvs.focusCenter()
+				cameraOnCnvs.rendering()
+			}
+		})
+
+	</script>
+</body>
+</html>
